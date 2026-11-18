@@ -58,6 +58,7 @@ async function authRequest(path: string, body: Record<string, string>) {
       user: result.user,
     }
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    window.dispatchEvent(new Event('naukhej-auth-change'))
   }
   return result
 }
@@ -82,4 +83,5 @@ export async function signOut() {
     })
   }
   clearStoredSession()
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('naukhej-auth-change'))
 }
