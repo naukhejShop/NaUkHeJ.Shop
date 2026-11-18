@@ -13,8 +13,7 @@ function config() {
 function headers(extra: Record<string, string> = {}) {
   const { key } = config()
   const session = getStoredSession()
-  if (!session?.access_token) throw new Error('Please login first.')
-  return { apikey: key, Authorization: `Bearer ${session.access_token}`, ...extra }
+  return { apikey: key, ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}), ...extra }
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
