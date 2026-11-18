@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   ArrowRight,
@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils'
 import { KeyBox } from '@/components/key-box'
 import { useShop } from '@/lib/shop-store'
+import { loadTopBuyers, type TopBuyer } from '@/lib/supabase-shop'
 import {
   formatDuration,
   formatINR,
@@ -38,6 +39,11 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const { products } = useShop()
+  const [topBuyers, setTopBuyers] = useState<TopBuyer[]>([])
+
+  useEffect(() => {
+    loadTopBuyers().then(setTopBuyers).catch(() => setTopBuyers([]))
+  }, [])
   const visible = products.filter((p) => p.active)
   const lowestPrice = Math.min(
     ...visible.flatMap((p) => p.durations.map((d) => d.price)),
@@ -128,6 +134,31 @@ function Home() {
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="mx-auto max-w-content px-4 pb-16 sm:px-6">
+        <div className="mb-5">
+          <h2 className="font-display text-2xl font-bold">🏆 Top Buyers</h2>
+          <p className="text-sm text-muted-foreground">Customers with the most completed purchases.</p>
+        </div>
+        {topBuyers.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border bg-card">
+            {topBuyers.map((buyer, index) => (
+              <div key={buyer.buyer_name + index} className="flex items-center justify-between gap-4 border-b p-4 last:border-0">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-sm font-bold">{index + 1}</span>
+                  <span className="truncate font-semibold">{buyer.buyer_name}</span>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-semibold">{buyer.purchase_count} purchases</p>
+                  <p className="text-xs text-muted-foreground">{formatINR(Number(buyer.total_spent))} spent</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Top buyers will appear here after purchases.</p>
         )}
       </section>
     </>
