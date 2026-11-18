@@ -42,8 +42,10 @@ export function SiteHeader() {
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    const session = getStoredSession()
-    setSessionEmail(session?.user.email ?? null)
+    const syncSession = () => setSessionEmail(getStoredSession()?.user.email ?? null)
+    syncSession()
+    window.addEventListener('naukhej-auth-change', syncSession)
+    return () => window.removeEventListener('naukhej-auth-change', syncSession)
   }, [])
   const [open, setOpen] = useState(false)
 
