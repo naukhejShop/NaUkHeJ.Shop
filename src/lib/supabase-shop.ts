@@ -72,18 +72,7 @@ export type DepositRow = {
 }
 
 export async function loadProducts(): Promise<ShopProduct[]> {
-  const products = await request<Array<Omit<ShopProduct, 'durations'>>>(
-    'products?select=id,name,description,price,category,image_url,video_url,product_type,stock,is_active&is_active=eq.true&order=created_at.desc',
-    { method: 'GET' },
-  )
-  const durations = await request<ShopDuration[]>(
-    'product_durations?select=id,product_id,duration_name,duration_value,duration_unit,price_paise,is_active&is_active=eq.true&order=duration_value.asc',
-    { method: 'GET' },
-  )
-  return products.map((product) => ({
-    ...product,
-    durations: durations.filter((duration) => duration.product_id === product.id),
-  }))
+  return rpc<ShopProduct[]>('get_shop_products', {})
 }
 
 export async function loadMyWallet(): Promise<number> {
