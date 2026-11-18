@@ -7,7 +7,8 @@ import {
   useState,
 } from 'react'
 
-import { loadProducts } from '@/lib/supabase-shop'
+import { loadMyWallet, loadProducts, purchaseKey } from '@/lib/supabase-shop'
+import { getStoredSession } from '@/lib/auth'
 
 import {
   initialShopData,
@@ -46,7 +47,7 @@ type BuyResult =
   | { ok: false; reason: 'balance' | 'stock' | 'missing' }
 
 type ShopContextValue = ShopData & {
-  buy: (productId: string, durationId: string) => BuyResult
+  buy: (productId: string, durationId: string) => Promise<BuyResult>
   requestFunds: (amount: number, utr: string) => void
   reviewFundRequest: (id: string, approve: boolean) => void
   updateDuration: (productId: string, duration: Duration) => void
@@ -73,6 +74,20 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     }
     setHydrated(true)
 
+    const syncAccount = () => {
+      const session = getStoredSession()
+      if (!session?.user?.id) {
+        setData((current) => ({ ...current, balance: 0, currentUser: 'Guest', orders: [], fundRequests: [] }))
+        return
+      }
+      setData((current) => ({ ...current, currentUser: session.user.email || 'Customer' }))
+      loadMyWallet().then((balance) => setData((current) => ({ ...current, balance }))).catch(() => {
+        setData((current) => ({ ...current, balance: 0 }))
+      })
+    }
+    syncAccount()
+    window.addEventListener('naukhej-auth-change', syncAccount)
+
     let active = true
     loadProducts()
       .then((rows) => {
@@ -98,7 +113,10 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {
         if (active) setData((current) => ({ ...current, products: [] }))
       })
-    return () => { active = false }
+    return () => {
+      active = false
+      window.removeEventListener('naukhej-auth-change', syncAccount)
+    }
   }, [])
 
   useEffect(() => {
@@ -111,33 +129,57 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   }, [data, hydrated])
 
   const buy = useCallback(
-    (productId: string, durationId: string): BuyResult => {
+    async (productId: string, durationId: string): Promise<BuyResult> => {
       const product = data.products.find((p) => p.id === productId)
       const duration = product?.durations.find((d) => d.id === durationId)
+      const session = getStoredSession()
+      if (!session?.user?.id) return { ok: false, reason: 'missing' }
       if (!product || !duration) return { ok: false, reason: 'missing' }
       if (product.stock <= 0) return { ok: false, reason: 'stock' }
-      if (data.balance < duration.price) return { ok: false, reason: 'balance' }
-
-      const order: Order = {
-        id: uid('ord'),
-        productId,
-        productName: product.name,
-        hours: duration.hours,
-        price: duration.price,
-        key: generateKey(),
-        createdAt: new Date().toISOString(),
+      try {
+        const result = await purchaseKey({
+          durationId: Number(durationId),
+          customerName: session.user.email || 'Customer',
+          phone: '',
+          address: '',
+        })
+        const [balance, products] = await Promise.all([loadMyWallet(), loadProducts()])
+        const order: Order = {
+          id: String(result.order_id),
+          productId,
+          productName: product.name,
+          hours: duration.hours,
+          price: duration.price,
+          key: result.delivered_key,
+          createdAt: new Date().toISOString(),
+        }
+        setData((current) => ({
+          ...current,
+          balance,
+          products: products.map((row) => ({
+            id: String(row.id),
+            name: row.name,
+            tagline: row.description || '',
+            category: row.category || 'Other',
+            stock: Number(row.stock || 0),
+            active: row.is_active,
+            features: [],
+            durations: row.durations.map((item) => ({
+              id: String(item.id),
+              hours: item.duration_value * (item.duration_unit === 'days' ? 24 : 1),
+              price: Number(item.price_paise) / 100,
+            })),
+          })),
+        }))
+        return { ok: true, order }
+      } catch (error) {
+        const message = error instanceof Error ? error.message.toLowerCase() : ''
+        if (message.includes('balance') || message.includes('insufficient')) return { ok: false, reason: 'balance' }
+        if (message.includes('stock') || message.includes('available key')) return { ok: false, reason: 'stock' }
+        throw error
       }
-      setData((d) => ({
-        ...d,
-        balance: d.balance - duration.price,
-        orders: [order, ...d.orders],
-        products: d.products.map((p) =>
-          p.id === productId ? { ...p, stock: p.stock - 1 } : p,
-        ),
-      }))
-      return { ok: true, order }
     },
-    [data],
+    [data.products],
   )
 
   const value = useMemo<ShopContextValue>(
