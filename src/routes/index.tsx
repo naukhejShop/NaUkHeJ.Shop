@@ -177,20 +177,27 @@ function ProductCard({ product }: { product: Product }) {
   const outOfStock = product.stock <= 0
   const shortBy = selected ? selected.price - balance : 0
 
-  function handleBuy() {
+  async function handleBuy() {
     if (!selected) return
-    const result = buy(product.id, selected.id)
-    setConfirmOpen(false)
-    if (result.ok) {
-      setOrder(result.order)
-      toast.success('Key delivered!', { description: `${product.name} · ${formatDuration(selected.hours)}` })
-    } else if (result.reason === 'balance') {
-      toast.error('Not enough balance', {
-        description: 'Add funds to your wallet to continue.',
-        action: { label: 'Add funds', onClick: () => navigate({ to: '/wallet' }) },
-      })
-    } else if (result.reason === 'stock') {
-      toast.error('Out of stock', { description: 'This panel is sold out right now.' })
+    try {
+      const result = await buy(product.id, selected.id)
+      setConfirmOpen(false)
+      if (result.ok) {
+        setOrder(result.order)
+        toast.success('Key delivered!', { description: `${product.name} · ${formatDuration(selected.hours)}` })
+      } else if (result.reason === 'balance') {
+        toast.error('Not enough balance', {
+          description: 'Add funds to your wallet to continue.',
+          action: { label: 'Add funds', onClick: () => navigate({ to: '/wallet' }) },
+        })
+      } else if (result.reason === 'stock') {
+        toast.error('Out of stock', { description: 'This panel is sold out right now.' })
+      } else {
+        toast.error('Please login first')
+        navigate({ to: '/login' })
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Purchase failed. Please try again.')
     }
   }
 
