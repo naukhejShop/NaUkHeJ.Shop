@@ -202,3 +202,13 @@ export async function purchaseKey(input: {
   if (!rows?.length) throw new Error('Purchase did not return a key.')
   return rows[0]
 }
+
+export type TopBuyer = {
+  buyer_name: string
+  purchase_count: number
+  total_spent: number
+}
+
+export async function loadTopBuyers(): Promise<TopBuyer[]> {
+  return rpc<TopBuyer[]>('get_top_buyers', {})
+}
