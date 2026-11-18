@@ -80,7 +80,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
         setData((current) => ({ ...current, balance: 0, currentUser: 'Guest', orders: [], fundRequests: [] }))
         return
       }
-      setData((current) => ({ ...current, currentUser: session.user.email || 'Customer' }))
+      setData((current) => ({ ...current, currentUser: session.user.email || 'Customer', orders: [], fundRequests: [] }))
       loadMyWallet().then((balance) => setData((current) => ({ ...current, balance }))).catch(() => {
         setData((current) => ({ ...current, balance: 0 }))
       })
@@ -156,6 +156,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
         setData((current) => ({
           ...current,
           balance,
+          orders: [order, ...current.orders],
           products: products.map((row) => ({
             id: String(row.id),
             name: row.name,
