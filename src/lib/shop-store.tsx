@@ -7,6 +7,8 @@ import {
   useState,
 } from 'react'
 
+import { loadProducts } from '@/lib/supabase-shop'
+
 import {
   initialShopData,
   type Duration,
@@ -70,6 +72,33 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
       // ignore corrupt storage and keep fixtures
     }
     setHydrated(true)
+
+    let active = true
+    loadProducts()
+      .then((rows) => {
+        if (!active) return
+        setData((current) => ({
+          ...current,
+          products: rows.map((row) => ({
+            id: String(row.id),
+            name: row.name,
+            tagline: row.description || '',
+            category: row.category || 'Other',
+            stock: Number(row.stock || 0),
+            active: row.is_active,
+            features: [],
+            durations: row.durations.map((duration) => ({
+              id: String(duration.id),
+              hours: duration.duration_value * (duration.duration_unit === 'days' ? 24 : 1),
+              price: Number(duration.price_paise) / 100,
+            })),
+          })),
+        }))
+      })
+      .catch(() => {
+        if (active) setData((current) => ({ ...current, products: [] }))
+      })
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
