@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { signIn, signUp } from '@/lib/auth'
@@ -13,7 +13,7 @@ function LoginPage() {
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setBusy(true)
     try {
