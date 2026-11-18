@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { KeyRound, Menu, Plus, ShieldCheck, Wallet } from 'lucide-react'
 
@@ -41,10 +41,10 @@ export function SiteHeader() {
   const { balance } = useShop()
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
 
-  useState(() => {
+  useEffect(() => {
     const session = getStoredSession()
     setSessionEmail(session?.user.email ?? null)
-  })
+  }, [])
   const [open, setOpen] = useState(false)
 
   return (
