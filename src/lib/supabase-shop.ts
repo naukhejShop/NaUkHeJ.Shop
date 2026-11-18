@@ -163,6 +163,10 @@ export async function rejectDeposit(id: number): Promise<string> {
   return rpc<string>('reject_deposit', { p_deposit_id: id })
 }
 
+export async function loadAdminDeposits(): Promise<DepositRow[]> {
+  return rpc<DepositRow[]>('admin_get_deposits', {})
+}
+
 export async function loadCustomers() {
   return rpc<Array<{
     user_id: string
