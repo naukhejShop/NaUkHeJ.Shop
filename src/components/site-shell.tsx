@@ -12,6 +12,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { useShop } from '@/lib/shop-store'
+import { getStoredSession, signOut } from '@/lib/auth'
+import { toast } from 'sonner'
 import { formatINR } from '@/lib/fixtures'
 
 const NAV = [
@@ -37,6 +39,12 @@ export function Logo() {
 
 export function SiteHeader() {
   const { balance } = useShop()
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null)
+
+  useState(() => {
+    const session = getStoredSession()
+    setSessionEmail(session?.user.email ?? null)
+  })
   const [open, setOpen] = useState(false)
 
   return (
@@ -67,6 +75,14 @@ export function SiteHeader() {
               <Plus className="size-3" />
             </span>
           </Link>
+          {sessionEmail ? (
+            <Button variant="outline" size="sm" onClick={async () => {
+              try { await signOut(); setSessionEmail(null); toast.success('Logged out') }
+              catch { toast.error('Logout failed. Please try again.') }
+            }}>Logout</Button>
+          ) : (
+            <Button asChild size="sm" variant="outline"><Link to="/login">Login</Link></Button>
+          )}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
